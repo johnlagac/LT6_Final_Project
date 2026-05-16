@@ -8,14 +8,17 @@ DIRECTORY
 LT6_Final_Project/
 │
 ├── code/
-│ └── basic.py
-│ └── intermediate.py
-│ └── advanced.py
+│ ├── basic/
+│   └── basic.py
+│ ├── intermediate/
+│   └── intermediate.py
+│ ├── advanced/
+│   └── advanced.py
 │
 ├── tests/
 │ ├── basic/
-│  └── basic_test.py
+│   └── basic_test.py
 │ ├── intermediate/
-│  └── intermediate_test.py
+│    └── intermediate_test.py
 │ ├── advanced/
-│  └── advanced_test.py
+│    └── advanced_test.py
