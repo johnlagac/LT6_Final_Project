@@ -1,0 +1,16 @@
+product_id,product_name,category,starting_stock,unit_cost,unit_price
+P001,Coke 1L,Beverage,24,60,75
+P002,Royal 1L,Beverage,18,58,72
+P003,Bottled Water 500ml,Beverage,30,10,15
+P004,Piattos Snack,Snack,36,14,18
+P005,Nova Snack,Snack,32,13,18
+P006,Lucky Me Beef Noodles,Food,40,10,14
+P007,Pancit Canton Chilimansi,Food,40,12,16
+P008,Canned Sardines,Food,25,22,28
+P009,Corned Beef Small,Food,20,32,42
+P010,Egg,Food,60,7,10
+P011,Rice 1kg,Food,30,42,50
+P012,Coffee Sachet,Beverage,80,5,8
+P013,Shampoo Sachet,Personal Care,70,4,7
+P014,Laundry Detergent Sachet,Household,75,5,8
+P015,Dishwashing Liquid Sachet,Household,50,6,10

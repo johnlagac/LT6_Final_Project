@@ -1,0 +1,41 @@
+transaction_id,transaction_date,product_id,quantity_sold,product_name,category,starting_stock,unit_cost,unit_price,revenue,expense,gross_profit
+T001,2026-01-01,P001,2,Coke 1L,Beverage,24,60,75,150,120,30
+T002,2026-01-01,P004,3,Piattos Snack,Snack,36,14,18,54,42,12
+T003,2026-01-01,P012,5,Coffee Sachet,Beverage,80,5,8,40,25,15
+T004,2026-01-01,P010,6,Egg,Food,60,7,10,60,42,18
+T005,2026-01-01,P006,2,Lucky Me Beef Noodles,Food,40,10,14,28,20,8
+T006,2026-01-01,P003,4,Bottled Water 500ml,Beverage,30,10,15,60,40,20
+T007,2026-01-01,P014,3,Laundry Detergent Sachet,Household,75,5,8,24,15,9
+T008,2026-01-01,P013,4,Shampoo Sachet,Personal Care,70,4,7,28,16,12
+T009,2026-01-01,P007,2,Pancit Canton Chilimansi,Food,40,12,16,32,24,8
+T010,2026-01-01,P008,1,Canned Sardines,Food,25,22,28,28,22,6
+T011,2026-01-01,P011,2,Rice 1kg,Food,30,42,50,100,84,16
+T012,2026-01-01,P002,1,Royal 1L,Beverage,18,58,72,72,58,14
+T013,2026-01-01,P005,2,Nova Snack,Snack,32,13,18,36,26,10
+T014,2026-01-01,P010,8,Egg,Food,60,7,10,80,56,24
+T015,2026-01-01,P012,6,Coffee Sachet,Beverage,80,5,8,48,30,18
+T016,2026-01-01,P015,2,Dishwashing Liquid Sachet,Household,50,6,10,20,12,8
+T017,2026-01-01,P009,1,Corned Beef Small,Food,20,32,42,42,32,10
+T018,2026-01-01,P006,3,Lucky Me Beef Noodles,Food,40,10,14,42,30,12
+T019,2026-01-01,P004,4,Piattos Snack,Snack,36,14,18,72,56,16
+T020,2026-01-01,P001,1,Coke 1L,Beverage,24,60,75,75,60,15
+T021,2026-01-01,P013,3,Shampoo Sachet,Personal Care,70,4,7,21,12,9
+T022,2026-01-01,P014,5,Laundry Detergent Sachet,Household,75,5,8,40,25,15
+T023,2026-01-01,P003,3,Bottled Water 500ml,Beverage,30,10,15,45,30,15
+T024,2026-01-01,P007,4,Pancit Canton Chilimansi,Food,40,12,16,64,48,16
+T025,2026-01-01,P008,2,Canned Sardines,Food,25,22,28,56,44,12
+T026,2026-01-01,P012,8,Coffee Sachet,Beverage,80,5,8,64,40,24
+T027,2026-01-01,P010,10,Egg,Food,60,7,10,100,70,30
+T028,2026-01-01,P011,1,Rice 1kg,Food,30,42,50,50,42,8
+T029,2026-01-01,P005,3,Nova Snack,Snack,32,13,18,54,39,15
+T030,2026-01-01,P002,2,Royal 1L,Beverage,18,58,72,144,116,28
+T031,2026-01-01,P006,4,Lucky Me Beef Noodles,Food,40,10,14,56,40,16
+T032,2026-01-01,P004,2,Piattos Snack,Snack,36,14,18,36,28,8
+T033,2026-01-01,P014,4,Laundry Detergent Sachet,Household,75,5,8,32,20,12
+T034,2026-01-01,P015,3,Dishwashing Liquid Sachet,Household,50,6,10,30,18,12
+T035,2026-01-01,P003,5,Bottled Water 500ml,Beverage,30,10,15,75,50,25
+T036,2026-01-01,P009,2,Corned Beef Small,Food,20,32,42,84,64,20
+T037,2026-01-01,P013,5,Shampoo Sachet,Personal Care,70,4,7,35,20,15
+T038,2026-01-01,P007,3,Pancit Canton Chilimansi,Food,40,12,16,48,36,12
+T039,2026-01-01,P012,4,Coffee Sachet,Beverage,80,5,8,32,20,12
+T040,2026-01-01,P001,2,Coke 1L,Beverage,24,60,75,150,120,30

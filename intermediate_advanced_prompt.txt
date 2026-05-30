@@ -1,0 +1,410 @@
+Prompt for Intermediate and Advanced Code Development
+
+We are working on the Sari-Sari Store Simulator project for DSC 512. The project is a standalone three-level Python program that starts with a Basic one-day sales calculator, then expands into a one-month simulator with analytics, and finally becomes a five-year inventory optimization and pricing recommendation system .
+
+We already created the Basic goal using this project structure:
+
+LT6_Final_Project/
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── basic/
+│   │   ├── __init__.py
+│   │   ├── data_loader.py
+│   │   └── sales_calculator.py
+│   │
+│   ├── intermediate/
+│   │   └── __init__.py
+│   │
+│   ├── advanced/
+│   │   └── __init__.py
+│   │
+│   └── database/
+│       └── sari_sari_store.db
+│
+├── data/
+│   ├── raw/
+│   │   ├── inventory.csv
+│   │   └── transactions.csv
+│   │
+│   └── processed/
+│       └── basic/
+│
+└── test/
+
+The Basic code currently uses two input CSV files:
+
+data/raw/inventory.csv
+data/raw/transactions.csv
+
+The inventory.csv file contains product-level information:
+
+product_id
+product_name
+category
+starting_stock
+unit_cost
+unit_price
+
+The transactions.csv file contains sales activity:
+
+transaction_id
+transaction_date
+product_id
+quantity_sold
+
+The Basic code reads those CSV files, validates them, joins transactions with inventory using product_id, calculates revenue, expense, gross profit, remaining stock, and saves output CSV files and SQLite tables.
+
+Important design rules:
+
+Do not overwrite data/raw/inventory.csv or data/raw/transactions.csv.
+Treat files in data/raw/ as shared source data.
+
+Save generated outputs to level-specific folders:
+
+data/processed/basic/
+data/processed/intermediate/
+data/processed/advanced/
+
+Use the same SQLite database:
+
+src/database/sari_sari_store.db
+Use SQLAlchemy to save DataFrames to SQLite.
+Use SQL Magic only for notebook inspection/demo, not as the main program logic.
+Keep all reusable logic in .py files, not only in Jupyter notebooks.
+Use level-specific table names to avoid overwriting Basic results.
+
+For example, Basic output tables should be named like:
+
+basic_daily_transaction_details
+basic_daily_product_summary
+basic_daily_ledger_summary
+
+Intermediate tables should use names like:
+
+intermediate_monthly_transaction_details
+intermediate_monthly_product_summary
+intermediate_monthly_ledger_summary
+intermediate_restock_recommendations
+intermediate_monthly_dashboard_data
+
+Advanced tables should use names like:
+
+advanced_five_year_transaction_details
+advanced_monthly_product_summary
+advanced_inventory_recommendations
+advanced_pricing_recommendations
+advanced_customer_feedback
+advanced_sales_events
+Task 1: Build Intermediate-Level Code
+
+Create Python files inside:
+
+src/intermediate/
+
+Suggested files:
+
+src/intermediate/
+├── __init__.py
+├── data_generator.py
+├── monthly_simulator.py
+├── restock_calculator.py
+└── dashboard_report.py
+
+The Intermediate goal should satisfy the project requirement:
+
+Calculate revenues and expenses from one month of transactions.
+Create inventory files before monthly sales and restocking files for the next month.
+Generate a monthly dashboard and analytics report.
+Generate synthetic monthly transaction data.
+Allow benchmark information about the Philippine sari-sari store industry to influence the generated mock data.
+
+Use the existing Basic structure as the model.
+
+The Intermediate code should:
+
+Load data/raw/inventory.csv.
+Either load or generate a month of transactions.
+
+Save generated monthly transactions to:
+
+data/processed/intermediate/monthly_transactions.csv
+Calculate monthly revenue, expenses, gross profit, and remaining stock.
+Create a monthly product summary.
+Create a monthly ledger summary.
+Create restock recommendations based on remaining stock and sales volume.
+
+Save CSV outputs to:
+
+data/processed/intermediate/
+Save output tables to SQLite using SQLAlchemy.
+Avoid modifying the original raw CSV files.
+
+Suggested Intermediate outputs:
+
+data/processed/intermediate/monthly_transactions.csv
+data/processed/intermediate/monthly_transaction_details.csv
+data/processed/intermediate/monthly_product_summary.csv
+data/processed/intermediate/monthly_ledger_summary.csv
+data/processed/intermediate/restock_recommendations.csv
+data/processed/intermediate/monthly_dashboard_data.csv
+
+Suggested Intermediate SQLite tables:
+
+intermediate_monthly_transactions
+intermediate_monthly_transaction_details
+intermediate_monthly_product_summary
+intermediate_monthly_ledger_summary
+intermediate_restock_recommendations
+intermediate_monthly_dashboard_data
+
+The monthly simulator should build on the same fields used in Basic:
+
+transaction_id
+transaction_date
+product_id
+quantity_sold
+
+When joined with inventory, calculate:
+
+revenue = quantity_sold * unit_price
+expense = quantity_sold * unit_cost
+gross_profit = revenue - expense
+remaining_stock = starting_stock - total_quantity_sold
+
+For restocking, create a simple rule-based system first. Example:
+
+If remaining_stock <= reorder_point, recommend restock.
+Suggested restock quantity = max(average_daily_sales * 14, starting_stock - remaining_stock)
+
+The dashboard data should summarize:
+
+total_revenue
+total_expense
+gross_profit
+top-selling products
+lowest-stock products
+sales by category
+daily revenue trend
+restock recommendations
+Task 2: Build Advanced-Level Code
+
+Create Python files inside:
+
+src/advanced/
+
+Suggested files:
+
+src/advanced/
+├── __init__.py
+├── five_year_generator.py
+├── sales_event_generator.py
+├── feedback_generator.py
+├── inventory_optimizer.py
+└── pricing_strategy.py
+
+The Advanced goal should satisfy the project requirement:
+
+Calculate revenues and expenses from five years of transactions.
+Generate five years of transaction data using one folder per year and one folder per month.
+On a monthly basis, generate transactions, add grocery-wide sales events, create inventory/restock files, and generate customer feedback.
+Build an inventory optimization engine and pricing strategy analysis.
+Recommend which stocks should be restocked.
+Recommend selling prices based on historical data.
+
+The Advanced code should:
+
+Use the same data/raw/inventory.csv as the product master file.
+Generate five years of synthetic monthly transactions.
+
+Save generated data using this folder pattern:
+
+data/processed/advanced/year_2022/month_01/
+data/processed/advanced/year_2022/month_02/
+...
+data/processed/advanced/year_2026/month_12/
+
+Each monthly folder should contain:
+
+transactions.csv
+transaction_details.csv
+product_summary.csv
+ledger_summary.csv
+restock_recommendations.csv
+customer_feedback.csv
+sales_events.csv
+
+Save aggregated five-year outputs to:
+
+data/processed/advanced/
+Save Advanced tables to SQLite using SQLAlchemy.
+Do not overwrite raw input files.
+Use level-specific table names beginning with advanced_.
+
+Suggested Advanced SQLite tables:
+
+advanced_transactions_5yr
+advanced_transaction_details_5yr
+advanced_monthly_product_summary
+advanced_monthly_ledger_summary
+advanced_inventory_recommendations
+advanced_pricing_recommendations
+advanced_customer_feedback
+advanced_sales_events
+
+The sales event generator should create occasional grocery-wide sales or promotions. For example:
+
+event_id
+event_name
+start_date
+end_date
+discount_rate
+affected_category
+
+Sales events should cause visible sales increases during promo periods so that the dashboard can reflect sales peaks.
+
+The customer feedback generator should create monthly reviews with fields such as:
+
+feedback_id
+feedback_date
+product_id
+rating
+comment
+sentiment
+
+The inventory optimizer should recommend restocking based on:
+
+historical monthly demand
+remaining stock
+average daily sales
+stockout risk
+category demand
+sales event impact
+
+The pricing strategy module should recommend prices based on:
+
+historical sales volume
+current unit cost
+current unit price
+gross margin
+competitor price if available
+demand trend
+
+A simple first version can use this logic:
+
+gross_margin = (unit_price - unit_cost) / unit_price
+
+If demand is high and gross margin is low:
+    recommend a slight price increase.
+
+If demand is low and stock is high:
+    recommend a slight price decrease.
+
+If competitor price is available:
+    keep recommended price near competitor price.
+
+Otherwise:
+    recommended_price = current_price adjusted by demand trend.
+
+Suggested pricing output columns:
+
+product_id
+product_name
+category
+current_unit_cost
+current_unit_price
+average_monthly_quantity_sold
+gross_margin
+demand_trend
+recommended_price
+pricing_reason
+
+Suggested inventory recommendation output columns:
+
+product_id
+product_name
+category
+average_monthly_quantity_sold
+current_stock
+stockout_risk
+recommended_restock_quantity
+recommendation_reason
+Coding Style Requirements
+
+Please follow the existing Basic code style:
+
+Use clear function names.
+Use pandas for CSV loading and calculations.
+Use SQLAlchemy for SQLite output.
+Use Path from pathlib for file paths.
+Add docstrings to each function.
+Keep raw data unchanged.
+Save generated files to data/processed/<level>/.
+
+Save database tables to:
+
+src/database/sari_sari_store.db
+Use if_exists="replace" only for generated level-specific output tables.
+Avoid overwriting shared raw input files.
+Return DataFrames from major functions so they can be tested or inspected in Jupyter.
+Expected Import Pattern
+
+Use imports compatible with the project root:
+
+from src.basic.data_loader import load_inventory
+
+For Intermediate:
+
+from src.intermediate.monthly_simulator import run_intermediate_monthly_simulator
+
+For Advanced:
+
+from src.advanced.inventory_optimizer import run_inventory_optimizer
+from src.advanced.pricing_strategy import run_pricing_strategy
+Jupyter and SQL Magic Usage
+
+After running the .py files, notebooks can inspect the SQLite database with SQL Magic:
+
+%load_ext sql
+%sql sqlite:///src/database/sari_sari_store.db
+
+Example Intermediate query:
+
+%%sql
+
+SELECT *
+FROM intermediate_monthly_ledger_summary;
+
+Example Advanced query:
+
+%%sql
+
+SELECT *
+FROM advanced_pricing_recommendations
+ORDER BY product_id;
+
+Do not make SQL Magic the main implementation. It is only for demonstration, checking, and notebook exploration.
+
+Final Deliverables
+
+For Intermediate, create working .py files that can generate or process monthly sales and save:
+
+monthly transaction details
+monthly product summary
+monthly ledger summary
+restock recommendations
+monthly dashboard data
+SQLite tables
+
+For Advanced, create working .py files that can generate or process five years of data and save:
+
+five-year transactions
+monthly summaries
+sales event data
+customer feedback
+inventory recommendations
+pricing recommendations
+SQLite tables
+
+The code should be modular enough that the final project can demonstrate all three levels: Basic, Intermediate, and Advanced.
