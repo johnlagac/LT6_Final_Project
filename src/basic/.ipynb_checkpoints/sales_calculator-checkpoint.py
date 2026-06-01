@@ -147,7 +147,7 @@ def create_product_summary(sales_details: pd.DataFrame) -> pd.DataFrame:
     )
 
     product_summary["stock_status"] = product_summary["remaining_stock"].apply(
-        lambda stock: "OK" if stock > 0 else "INSUFFICIENT STOCK"
+        lambda stock: "OK" if stock >= 0 else "INSUFFICIENT STOCK"
     )
 
     return product_summary
@@ -182,7 +182,7 @@ def create_ledger_summary(
     gross_profit = total_revenue - total_expense
 
     insufficient_stock_products = (
-        product_summary["remaining_stock"] < 1
+        product_summary["remaining_stock"] < 0
     ).sum()
 
     ledger_status = (
