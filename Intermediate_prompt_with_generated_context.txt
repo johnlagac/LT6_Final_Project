@@ -1,0 +1,523 @@
+UPDATED PROMPT FOR INTERMEDIATE CODE DEVELOPMENT
+Sari-Sari Store Simulator – DSC 512 Final Project
+Learning Team 6
+
+PURPOSE OF THIS PROMPT
+
+We are working on the Intermediate part of our Sari-Sari Store Simulator project. The Basic level has already been created, and my assigned task is to build and refine the Intermediate level only.
+
+Please generate, improve, or validate clean, modular, and testable Python code for the Intermediate level only.
+
+IMPORTANT CONTEXT: A FIRST INTERMEDIATE CODE PACK HAS ALREADY BEEN GENERATED
+
+A first working Intermediate code pack has already been generated for this project. As much as possible, keep the implementation consistent with this existing generated version.
+
+The generated Intermediate code pack used this file structure:
+
+src/intermediate/
+├── __init__.py
+├── data_generator.py
+├── monthly_simulator.py
+├── restock_calculator.py
+└── dashboard_report.py
+
+test/
+└── test_intermediate_sanity_checks.py
+
+The generated code was designed to produce the following CSV outputs:
+
+data/processed/intermediate/monthly_transactions.csv
+data/processed/intermediate/monthly_transaction_details.csv
+data/processed/intermediate/monthly_product_summary.csv
+data/processed/intermediate/monthly_ledger_summary.csv
+data/processed/intermediate/restock_recommendations.csv
+data/processed/intermediate/monthly_dashboard_data.csv
+
+The generated code was also designed to create these SQLite tables:
+
+intermediate_monthly_transactions
+intermediate_monthly_transaction_details
+intermediate_monthly_product_summary
+intermediate_monthly_ledger_summary
+intermediate_restock_recommendations
+intermediate_monthly_dashboard_data
+
+The main function used in the generated code pack was:
+
+from src.intermediate.monthly_simulator import run_intermediate_monthly_simulator
+
+Example usage:
+
+outputs = run_intermediate_monthly_simulator(
+    month="2026-01",
+    benchmark_info={
+        "average_daily_customers": 50,
+        "weekend_multiplier": 1.20,
+        "payday_multiplier": 1.40,
+        "category_multipliers": {
+            "beverage": 1.35,
+            "snacks": 1.30,
+            "food": 1.20
+        }
+    },
+    random_seed=512
+)
+
+The generated function returns a dictionary of pandas DataFrames with keys similar to:
+
+monthly_transactions
+monthly_transaction_details
+monthly_product_summary
+monthly_ledger_summary
+restock_recommendations
+monthly_dashboard_data
+
+Please preserve these names unless there is a strong reason to improve them. If any names are changed, explain why and make sure all files, imports, tests, and notebook examples are updated consistently.
+
+The generated code followed these core design decisions:
+
+1. Do not overwrite or modify raw input files.
+2. Use data/raw/inventory.csv as the product master file.
+3. Use data/raw/transactions.csv only as shared raw source data, not as an overwrite target.
+4. Save all Intermediate generated outputs to data/processed/intermediate/.
+5. Save Intermediate SQLite tables to src/database/sari_sari_store.db.
+6. Use SQLAlchemy for saving DataFrames to SQLite.
+7. Use pandas for CSV loading, joining, calculations, and saving outputs.
+8. Use pathlib.Path for file paths.
+9. Keep reusable logic inside .py files.
+10. Use Jupyter only for running, checking, and demonstration.
+11. Return DataFrames from major functions for inspection and testing.
+12. Include sanity checks to prove correctness.
+13. Keep the code simple enough for students to explain during project defense.
+
+The generated code pack also included a sanity check file:
+
+test/test_intermediate_sanity_checks.py
+
+The test file was intended to check that:
+- raw files still exist,
+- raw files are not overwritten,
+- required Intermediate CSV outputs are created,
+- required SQLite tables are created,
+- revenue, expense, and gross profit calculations are correct,
+- remaining stock is correctly computed,
+- quantity sold is non-negative,
+- product IDs in transactions exist in inventory,
+- restock recommendations are non-negative, and
+- outputs are returned as pandas DataFrames.
+
+If you are revising or regenerating the code, please make sure the revised version stays aligned with the above generated baseline.
+
+PROJECT STRUCTURE
+
+Use this existing project structure:
+
+LT6_Final_Project/
+│
+├── src/
+│   ├── __init__.py
+│   │
+│   ├── basic/
+│   │   ├── __init__.py
+│   │   ├── data_loader.py
+│   │   └── sales_calculator.py
+│   │
+│   ├── intermediate/
+│   │   └── __init__.py
+│   │
+│   ├── advanced/
+│   │   └── __init__.py
+│   │
+│   └── database/
+│       └── sari_sari_store.db
+│
+├── data/
+│   ├── raw/
+│   │   ├── inventory.csv
+│   │   └── transactions.csv
+│   │
+│   └── processed/
+│       ├── basic/
+│       └── intermediate/
+│
+└── test/
+
+The raw inventory file is located at:
+
+data/raw/inventory.csv
+
+It contains the following columns:
+
+product_id
+product_name
+category
+starting_stock
+unit_cost
+unit_price
+
+The raw transaction file is located at:
+
+data/raw/transactions.csv
+
+It contains the following columns:
+
+transaction_id
+transaction_date
+product_id
+quantity_sold
+
+The Basic code currently reads those CSV files, validates them, joins transactions with inventory using product_id, calculates revenue, expense, gross profit, remaining stock, and saves output CSV files and SQLite tables.
+
+IMPORTANT RULES
+
+1. Do not overwrite or modify data/raw/inventory.csv.
+2. Do not overwrite or modify data/raw/transactions.csv.
+3. Treat all files inside data/raw/ as shared source data.
+4. Save all Intermediate generated outputs only to:
+
+data/processed/intermediate/
+
+5. Save SQLite tables to the existing database:
+
+src/database/sari_sari_store.db
+
+6. Use SQLAlchemy to save pandas DataFrames to SQLite.
+7. Use SQL Magic only for notebook inspection, not as the main program logic.
+8. Keep reusable logic in .py files, not only in Jupyter notebooks.
+9. Use level-specific table names beginning with intermediate_.
+10. Return DataFrames from major functions so they can be inspected and tested in Jupyter.
+11. Code should be readable, modular, and PEP8-compliant.
+12. Add clear docstrings to every function.
+13. Use pathlib.Path for file paths.
+14. Use pandas for loading, processing, and saving tabular data.
+
+INTERMEDIATE GOAL
+
+The Intermediate level should simulate one full month of sari-sari store transactions and generate analytics outputs.
+
+The code should be able to:
+
+1. Load the raw inventory file.
+2. Generate synthetic monthly transaction data using the same transaction fields used in Basic:
+   - transaction_id
+   - transaction_date
+   - product_id
+   - quantity_sold
+3. Allow optional benchmark assumptions about the Philippine sari-sari store industry to influence the generated mock data.
+4. Calculate monthly revenue, expense, gross profit, total quantity sold, and remaining stock.
+5. Create a monthly transaction details table.
+6. Create a monthly product summary table.
+7. Create a monthly ledger summary table.
+8. Create restock recommendations for the next month.
+9. Create monthly dashboard-ready data.
+10. Save all outputs as CSV files.
+11. Save all outputs as SQLite tables.
+12. Include sanity checks or tests to demonstrate correctness.
+
+SUGGESTED FILES TO CREATE OR PRESERVE
+
+Create or preserve these files inside:
+
+src/intermediate/
+
+Required files:
+
+src/intermediate/__init__.py
+src/intermediate/data_generator.py
+src/intermediate/monthly_simulator.py
+src/intermediate/restock_calculator.py
+src/intermediate/dashboard_report.py
+
+Also create or preserve this test file:
+
+test/test_intermediate_sanity_checks.py
+
+FUNCTIONAL REQUIREMENTS
+
+A. data_generator.py
+
+Create functions that generate synthetic monthly transactions.
+
+The generated transaction table should contain:
+
+transaction_id
+transaction_date
+product_id
+quantity_sold
+
+The generator should accept parameters such as:
+
+month
+inventory_df
+benchmark_info
+random_seed
+
+The benchmark_info dictionary may include:
+
+average_daily_customers
+weekend_multiplier
+payday_multiplier
+category_multipliers
+
+The generated data should be realistic enough for a sari-sari store:
+- Daily transactions should vary.
+- Weekends may have higher demand.
+- Payday periods may have higher demand.
+- Some categories may sell faster than others.
+- Quantity sold should not be negative.
+- Product IDs should come only from the inventory file.
+
+Save generated monthly transactions to:
+
+data/processed/intermediate/monthly_transactions.csv
+
+B. monthly_simulator.py
+
+Create or preserve the main function:
+
+run_intermediate_monthly_simulator()
+
+This function should orchestrate the full Intermediate workflow:
+
+1. Load inventory.
+2. Generate or load monthly transactions.
+3. Join transactions with inventory using product_id.
+4. Compute transaction-level values:
+   - revenue = quantity_sold * unit_price
+   - expense = quantity_sold * unit_cost
+   - gross_profit = revenue - expense
+5. Compute product-level monthly summary:
+   - product_id
+   - product_name
+   - category
+   - starting_stock
+   - total_quantity_sold
+   - unit_cost
+   - unit_price
+   - total_revenue
+   - total_expense
+   - gross_profit
+   - remaining_stock
+6. Compute ledger summary:
+   - total_revenue
+   - total_expense
+   - gross_profit
+   - total_quantity_sold
+   - number_of_transactions
+   - number_of_products_sold
+7. Generate restock recommendations.
+8. Generate dashboard-ready data.
+9. Save all CSV outputs.
+10. Save all SQLite outputs.
+11. Return a dictionary of DataFrames.
+
+C. restock_calculator.py
+
+Create or preserve a rule-based restocking function.
+
+The restock logic should include:
+
+average_daily_sales = total_quantity_sold / number_of_days
+
+A product should be recommended for restocking if:
+
+remaining_stock <= reorder_point
+
+The suggested restock quantity may be computed as:
+
+max(average_daily_sales * 14, starting_stock - remaining_stock)
+
+Suggested output columns:
+
+product_id
+product_name
+category
+starting_stock
+total_quantity_sold
+average_daily_sales
+remaining_stock
+reorder_point
+needs_restock
+recommended_restock_quantity
+restock_reason
+
+The restock rule should be simple, understandable, and easy to defend during presentation.
+
+D. dashboard_report.py
+
+Create dashboard-ready summary data.
+
+The dashboard output should include information for:
+
+1. Total revenue
+2. Total expense
+3. Gross profit
+4. Total quantity sold
+5. Top-selling products
+6. Lowest-stock products
+7. Sales by category
+8. Daily revenue trend
+9. Restock recommendations
+
+The dashboard file can be saved as one tidy CSV with columns such as:
+
+section
+metric
+category
+product_id
+product_name
+date
+value
+
+Also create visualization functions if possible, such as:
+- daily revenue trend chart
+- category sales chart
+- top-selling products chart
+- lowest-stock products chart
+
+Charts should be saved to:
+
+data/processed/intermediate/
+
+EXPECTED CSV OUTPUTS
+
+Save these files to:
+
+data/processed/intermediate/
+
+Required outputs:
+
+monthly_transactions.csv
+monthly_transaction_details.csv
+monthly_product_summary.csv
+monthly_ledger_summary.csv
+restock_recommendations.csv
+monthly_dashboard_data.csv
+
+Optional but recommended outputs:
+
+daily_revenue_trend.png
+category_sales.png
+top_selling_products.png
+lowest_stock_products.png
+
+EXPECTED SQLITE TABLES
+
+Save the DataFrames to SQLite using SQLAlchemy in:
+
+src/database/sari_sari_store.db
+
+Use these table names:
+
+intermediate_monthly_transactions
+intermediate_monthly_transaction_details
+intermediate_monthly_product_summary
+intermediate_monthly_ledger_summary
+intermediate_restock_recommendations
+intermediate_monthly_dashboard_data
+
+Use if_exists="replace" only for these generated Intermediate-level tables.
+
+Do not overwrite Basic or Advanced tables.
+
+EXPECTED IMPORT PATTERN
+
+The code should be compatible with running from the project root.
+
+Expected import:
+
+from src.intermediate.monthly_simulator import run_intermediate_monthly_simulator
+
+Example usage in Jupyter:
+
+from src.intermediate.monthly_simulator import run_intermediate_monthly_simulator
+
+outputs = run_intermediate_monthly_simulator(
+    month="2026-01",
+    benchmark_info={
+        "average_daily_customers": 50,
+        "weekend_multiplier": 1.20,
+        "payday_multiplier": 1.40,
+        "category_multipliers": {
+            "beverage": 1.35,
+            "snacks": 1.30,
+            "food": 1.20
+        }
+    },
+    random_seed=512
+)
+
+outputs["monthly_ledger_summary"]
+outputs["monthly_product_summary"].head()
+outputs["restock_recommendations"].head()
+
+SQL MAGIC DEMO ONLY
+
+After running the Python code, the notebook may inspect SQLite tables using SQL Magic:
+
+%load_ext sql
+%sql sqlite:///src/database/sari_sari_store.db
+
+Example query:
+
+%%sql
+
+SELECT *
+FROM intermediate_monthly_ledger_summary;
+
+Another example:
+
+%%sql
+
+SELECT *
+FROM intermediate_restock_recommendations
+WHERE needs_restock = 1;
+
+SQL Magic should only be for checking and demonstration. It should not be the main implementation.
+
+SANITY CHECK REQUIREMENTS
+
+Create or preserve this test file:
+
+test/test_intermediate_sanity_checks.py
+
+The tests should check:
+
+1. Raw inventory file still exists.
+2. Raw transaction file still exists.
+3. Raw files were not overwritten.
+4. Monthly transaction output is created.
+5. Monthly transaction details output is created.
+6. Product summary output is created.
+7. Ledger summary output is created.
+8. Restock recommendation output is created.
+9. Dashboard data output is created.
+10. Required SQLite tables are created.
+11. Total revenue equals sum of transaction-level revenue.
+12. Total expense equals sum of transaction-level expense.
+13. Gross profit equals revenue minus expense.
+14. Remaining stock equals starting stock minus total quantity sold.
+15. Quantity sold is never negative.
+16. Product IDs in transactions exist in inventory.
+17. Restock recommendations are non-negative.
+18. Outputs are returned as pandas DataFrames.
+
+The test script should be runnable from the project root using:
+
+python test/test_intermediate_sanity_checks.py
+
+EXPECTED FINAL ANSWER FORMAT
+
+Please provide:
+
+1. Complete code for each Intermediate .py file.
+2. Complete code for the sanity check file.
+3. Clear instructions on where to place each file.
+4. Clear instructions on how to run the Intermediate simulator in Jupyter.
+5. Clear instructions on how to check SQLite tables.
+6. Clear instructions on how to run the sanity checks.
+7. Avoid unnecessary complexity.
+8. Keep the implementation understandable enough for students to explain during presentation.
+9. Keep all code, output file names, table names, and function names consistent with the previously generated Intermediate code pack unless there is a clear improvement.
+
+The final solution should be modular enough to integrate with the existing Basic and future Advanced levels.
