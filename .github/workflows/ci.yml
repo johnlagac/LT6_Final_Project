@@ -31,17 +31,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install \
-            pandas \
-            numpy \
-            matplotlib \
-            sqlalchemy \
-            pytest \
-            pycodestyle
+          pip install -r requirements.txt
 
       - name: Show versions
         run: |
@@ -117,11 +112,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy matplotlib sqlalchemy
+          pip install -r requirements.txt
 
       - name: Basic — one-day workflow runs clean
         env:
@@ -129,7 +125,10 @@ jobs:
         run: |
           python -c "
           from src.basic.sales_calculator import run_basic_sales_calculator
-          result = run_basic_sales_calculator()
+          result = run_basic_sales_calculator(
+              save_csv_outputs=False,
+              save_sqlite_database=False,
+          )
           ledger = next(
               x for x in result
               if hasattr(x, 'columns') and 'ledger_status' in x.columns
@@ -196,11 +195,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy matplotlib sqlalchemy
+          pip install -r requirements.txt
 
       - name: Generate chart artifacts
         env:

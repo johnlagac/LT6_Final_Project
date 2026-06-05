@@ -1,2 +1,0 @@
-transaction_date,number_of_transactions,unique_products_sold,total_quantity_sold,total_revenue,total_expense,gross_profit,insufficient_stock_products,ledger_status
-2026-01-01,40,15,137,2307,1692,615,0,BALANCED

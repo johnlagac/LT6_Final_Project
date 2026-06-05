@@ -52,8 +52,10 @@ def _save(fig_path: Path) -> None:
 def generate_basic_charts() -> None:
     print("\n[BASIC]")
     out = _ensure_dir(FIGURES_DIR / "basic")
-    sales_details, product_summary, ledger_summary = (
-        run_basic_sales_calculator()
+    # Chart-only run — don't overwrite the basic CSVs or shared SQLite DB.
+    sales_details, product_summary, ledger_summary = run_basic_sales_calculator(
+        save_csv_outputs=False,
+        save_sqlite_database=False,
     )
 
     # 1. Revenue vs expense vs profit (single-day bar)
