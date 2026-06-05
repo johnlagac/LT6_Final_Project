@@ -16,10 +16,24 @@ venv/
 .vscode/
 
 # Generated pipeline outputs (regenerable by running the notebooks / runners)
-data/processed/
+data/processed/**
+!data/processed/**/.gitkeep
+
+# Generated report figures
+reports/figures/**
+!reports/figures/**/.gitkeep
 
 # Local SQLite database produced by the pipeline
 src/database/sari_sari_store.db
+
+# Stray generated / scratch files
+src/database/database.csv
+
+# Scratch notebooks
+notebooks/Untitled.ipynb
+
+# Local Claude Code settings
+.claude/
 
 # Session-local auto-memory artifacts
 CLAUDE.md
