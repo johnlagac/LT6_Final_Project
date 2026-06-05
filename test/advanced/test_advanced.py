@@ -1208,7 +1208,8 @@ class TestBuildLedgerSummary(unittest.TestCase):
     def test_required_columns_present(self):
         result = build_ledger_summary(self.details, 2022, 6)
         for col in [
-            "month", "month_start", "month_end", "days_in_month",
+            "month", "year", "month_num",
+            "month_start", "month_end", "days_in_month",
             "transaction_count", "unique_products_sold",
             "total_quantity_sold", "total_revenue", "total_expense",
             "gross_profit", "gross_margin_rate",
@@ -1218,6 +1219,13 @@ class TestBuildLedgerSummary(unittest.TestCase):
     def test_month_label_format(self):
         result = build_ledger_summary(self.details, 2022, 6)
         self.assertEqual(result.iloc[0]["month"], "2022-06")
+
+    def test_numeric_year_and_month_num(self):
+        """Dashboard needs numeric year + month_num to sort 60 rows."""
+        result = build_ledger_summary(self.details, 2022, 6)
+        row = result.iloc[0]
+        self.assertEqual(int(row["year"]), 2022)
+        self.assertEqual(int(row["month_num"]), 6)
 
     def test_days_in_month_correct(self):
         """June has 30 days."""
@@ -1437,6 +1445,8 @@ class TestBuildAdvancedDashboardData(unittest.TestCase):
                 days = calendar.monthrange(year, month)[1]
                 ledger_rows.append({
                     "month": f"{year}-{month:02d}",
+                    "year": year,
+                    "month_num": month,
                     "month_start": f"{year}-{month:02d}-01",
                     "month_end":   f"{year}-{month:02d}-{days:02d}",
                     "days_in_month": days,
@@ -1447,7 +1457,6 @@ class TestBuildAdvancedDashboardData(unittest.TestCase):
                     "total_expense":  1400.0,
                     "gross_profit":    600.0,
                     "gross_margin_rate": 0.30,
-                    "year": year, "month": month,
                 })
                 for _, prod in inventory.iterrows():
                     product_rows.append({

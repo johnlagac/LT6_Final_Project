@@ -249,7 +249,8 @@ def build_ledger_summary(
     -------
     pd.DataFrame
         One-row ledger with columns:
-        month, month_start, month_end, days_in_month,
+        month (label "YYYY-MM"), year (int), month_num (int 1-12),
+        month_start, month_end, days_in_month,
         transaction_count, unique_products_sold,
         total_quantity_sold, total_revenue, total_expense,
         gross_profit, gross_margin_rate
@@ -281,6 +282,8 @@ def build_ledger_summary(
 
     return pd.DataFrame([{
         "month":               month_label,
+        "year":                year,
+        "month_num":           month,
         "month_start":         month_start,
         "month_end":           month_end,
         "days_in_month":       days_in_month,
