@@ -219,12 +219,20 @@ def calculate_monthly_restock(
         how="left",
     )
 
-    merged = merged.merge(
-        inventory[["product_id", "product_name", "category",
-                   "unit_cost", "unit_price"]],
-        on="product_id",
-        how="left",
-    )
+    # Only merge inventory columns not already present in product_summary.
+    # all_product_summaries (from monthly_outputs.py) already contains
+    # product_name, category, unit_cost, unit_price — merging them again
+    # creates _x/_y duplicates and breaks the column selector below.
+    inv_cols_needed = [
+        c for c in ["product_name", "category", "unit_cost", "unit_price"]
+        if c not in merged.columns
+    ]
+    if inv_cols_needed:
+        merged = merged.merge(
+            inventory[["product_id"] + inv_cols_needed],
+            on="product_id",
+            how="left",
+        )
 
     merged["avg_monthly_demand"] = merged["avg_monthly_demand"].fillna(
         merged["total_quantity_sold"]
