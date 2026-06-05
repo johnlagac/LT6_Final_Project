@@ -68,14 +68,22 @@ def _build_pipeline_results() -> dict:
 
 
 class _PipelineFixture(unittest.TestCase):
-    """Shared expensive setup — run the 5-year pipeline once."""
+    """Shared expensive setup — run the 5-year pipeline once and reuse
+    the same results dict across every subclass.
+
+    Caching on ``cls.results`` would re-run the pipeline once per subclass
+    because each subclass gets its own class-level attribute. We bind on
+    ``_PipelineFixture.results`` directly so every subclass sees the same
+    cached value after the first ``setUpClass`` fires.
+    """
 
     results: dict | None = None
 
     @classmethod
     def setUpClass(cls):
-        if cls.results is None:
-            cls.results = _build_pipeline_results()
+        if _PipelineFixture.results is None:
+            _PipelineFixture.results = _build_pipeline_results()
+        cls.results = _PipelineFixture.results
 
 
 # ===========================================================================
