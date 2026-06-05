@@ -234,7 +234,18 @@ def build_ledger_summary(
     """
     Create a one-row monthly ledger summary.
 
-    Matches the schema used by Intermediate's build_monthly_ledger_summary().
+    Schema is a *superset* of Intermediate's build_monthly_ledger_summary():
+    all Intermediate columns are present, and the Advanced level additionally
+    emits numeric ``year`` and ``month_num`` columns. Those two columns are
+    required by build_advanced_dashboard_data() to sort 60 rows across five
+    years; the Intermediate level only summarises one month at a time and
+    therefore does not need them.
+
+    Cross-level reconciliation that compares only the shared columns
+    (``month``, ``total_revenue``, ``total_expense``, ``gross_profit``,
+    ``gross_margin_rate``, ``total_quantity_sold``, ``transaction_count``,
+    ``unique_products_sold``, ``month_start``, ``month_end``,
+    ``days_in_month``) remains valid.
 
     Parameters
     ----------
