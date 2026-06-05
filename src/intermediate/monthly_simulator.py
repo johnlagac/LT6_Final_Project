@@ -470,7 +470,7 @@ def save_intermediate_outputs(
     try:
         from sqlalchemy import create_engine
 
-        connection = create_engine(f"sqlite:///{database_file}")
+        connection = create_engine(f"sqlite:///{database_file}", connect_args={"timeout": 30})
     except ImportError:
         import sqlite3
 
@@ -488,7 +488,9 @@ def save_intermediate_outputs(
                     index=False,
                 )
     finally:
-        if hasattr(connection, "close"):
+        if hasattr(connection, "dispose"):
+            connection.dispose()
+        elif hasattr(connection, "close"):
             connection.close()
 
 

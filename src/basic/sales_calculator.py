@@ -295,7 +295,7 @@ def save_tables_to_sqlite(
     sqlite_db_path = Path(sqlite_db_path)
     sqlite_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(f"sqlite:///{sqlite_db_path}")
+    engine = create_engine(f"sqlite:///{sqlite_db_path}", connect_args={"timeout": 30})
 
     inventory.to_sql(
         name="inventory",
@@ -349,6 +349,8 @@ def save_tables_to_sqlite(
         print("\nSQLite tables created:")
         for row in result:
             print(f"- {row[0]}")
+
+    engine.dispose()
 
 
 def run_basic_sales_calculator(

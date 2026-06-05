@@ -343,7 +343,7 @@ def save_sales_events_to_sqlite(
     sqlite_db_path = Path(sqlite_db_path)
     sqlite_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(f"sqlite:///{sqlite_db_path}")
+    engine = create_engine(f"sqlite:///{sqlite_db_path}", connect_args={"timeout": 30})
 
     sales_events.to_sql(
         name="advanced_sales_events",
@@ -351,6 +351,8 @@ def save_sales_events_to_sqlite(
         if_exists="replace",
         index=False,
     )
+
+    engine.dispose()
 
     print(f"SQLite table saved    : advanced_sales_events → {sqlite_db_path}")
 
