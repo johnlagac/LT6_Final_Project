@@ -3,17 +3,32 @@ advanced_runner.py
 
 Master orchestrator for the Advanced-level Sari-Sari Store Simulator.
 
-Runs all five advanced modules in the correct dependency order:
+Runs all seven advanced modules in the correct dependency order:
 
     1. sales_event_generator  → generate five years of promo events
     2. five_year_generator    → generate 60 months of transactions (event-boosted)
-    3. feedback_generator     → generate monthly customer reviews
-    4. inventory_optimizer    → generate monthly restock recommendations
-    5. pricing_strategy       → generate final pricing recommendations
+    3. monthly_outputs        → transaction_details, product_summary, ledger_summary,
+                                inventory_before_monthly_sales per month folder
+    4. feedback_generator     → generate monthly customer reviews
+    5. inventory_optimizer    → generate monthly restock recommendations
+    6. pricing_strategy       → generate final pricing recommendations
+    7. advanced_dashboard     → five-year dashboard with event peak flags
 
 Each module saves its own CSVs and SQLite tables. This runner coordinates
 the pipeline and passes DataFrames between modules so nothing needs to be
 re-read from disk between steps.
+
+Each monthly folder now contains all seven required files:
+    transactions.csv
+    transaction_details.csv
+    product_summary.csv
+    ledger_summary.csv
+    restock_recommendations.csv
+    customer_feedback.csv
+    sales_events.csv
+
+Plus one additional file:
+    inventory_before_monthly_sales.csv
 
 Usage from project root:
 
@@ -27,9 +42,13 @@ Or from a Jupyter notebook:
 Returns a dictionary with all major DataFrames for notebook inspection:
     results["sales_events"]
     results["all_transactions"]
+    results["all_transaction_details"]
+    results["all_product_summaries"]
+    results["all_ledger_summaries"]
     results["all_feedback"]
     results["all_restock"]
     results["pricing_recommendations"]
+    results["dashboard"]
 """
 
 from pathlib import Path
@@ -38,17 +57,21 @@ import pandas as pd
 try:
     from src.advanced.sales_event_generator import run_sales_event_generator
     from src.advanced.five_year_generator   import run_five_year_generator
+    from src.advanced.monthly_outputs       import run_monthly_outputs
     from src.advanced.feedback_generator    import run_feedback_generator
     from src.advanced.inventory_optimizer   import run_inventory_optimizer
     from src.advanced.pricing_strategy      import run_pricing_strategy
+    from src.advanced.advanced_dashboard    import run_advanced_dashboard
 except ModuleNotFoundError:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from src.advanced.sales_event_generator import run_sales_event_generator
     from src.advanced.five_year_generator   import run_five_year_generator
+    from src.advanced.monthly_outputs       import run_monthly_outputs
     from src.advanced.feedback_generator    import run_feedback_generator
     from src.advanced.inventory_optimizer   import run_inventory_optimizer
     from src.advanced.pricing_strategy      import run_pricing_strategy
+    from src.advanced.advanced_dashboard    import run_advanced_dashboard
 
 
 def run_advanced_pipeline(
@@ -63,7 +86,7 @@ def run_advanced_pipeline(
     """
     Run the complete Advanced-level pipeline end to end.
 
-    Executes all five modules in dependency order, passing DataFrames
+    Executes all seven modules in dependency order, passing DataFrames
     between steps so no intermediate disk reads are needed.
 
     Parameters
@@ -78,8 +101,7 @@ def run_advanced_pipeline(
         Path to the shared SQLite database.
         Advanced tables are prefixed with advanced_.
     random_seed : int
-        Base seed for all random generation. Use a fixed value to
-        reproduce the same synthetic dataset across runs.
+        Base seed for all random generation.
     save_csv : bool
         Whether to save all CSV output files.
     save_sqlite : bool
@@ -91,11 +113,15 @@ def run_advanced_pipeline(
     -------
     dict
         Dictionary with keys:
-        - "sales_events"           : pd.DataFrame
-        - "all_transactions"       : pd.DataFrame
-        - "all_feedback"           : pd.DataFrame
-        - "all_restock"            : pd.DataFrame
-        - "pricing_recommendations": pd.DataFrame
+        - "sales_events"             : pd.DataFrame
+        - "all_transactions"         : pd.DataFrame
+        - "all_transaction_details"  : pd.DataFrame
+        - "all_product_summaries"    : pd.DataFrame
+        - "all_ledger_summaries"     : pd.DataFrame
+        - "all_feedback"             : pd.DataFrame
+        - "all_restock"              : pd.DataFrame
+        - "pricing_recommendations"  : pd.DataFrame
+        - "dashboard"                : pd.DataFrame
     """
     print("\n" + "=" * 72)
     print("ADVANCED GOAL: FULL FIVE-YEAR PIPELINE")
@@ -110,7 +136,7 @@ def run_advanced_pipeline(
     # Step 1: Generate sales events
     # Must run before five_year_generator so event boosts are applied
     # ------------------------------------------------------------------
-    print("\n[Step 1 / 5] Generating sales events...")
+    print("\n[Step 1 / 7] Generating sales events...")
     sales_events = run_sales_event_generator(
         output_base_folder=output_base_folder,
         sqlite_db_path=sqlite_db_path,
@@ -124,7 +150,7 @@ def run_advanced_pipeline(
     # Step 2: Generate five years of transactions
     # Passes sales_events so demand is boosted during promos
     # ------------------------------------------------------------------
-    print("\n[Step 2 / 5] Generating five-year transactions...")
+    print("\n[Step 2 / 7] Generating five-year transactions...")
     all_transactions = run_five_year_generator(
         inventory_csv_path=inventory_csv_path,
         output_base_folder=output_base_folder,
@@ -137,10 +163,29 @@ def run_advanced_pipeline(
     )
 
     # ------------------------------------------------------------------
-    # Step 3: Generate customer feedback
+    # Step 3: Generate monthly outputs
+    # Produces transaction_details, product_summary, ledger_summary,
+    # and inventory_before_monthly_sales for every month folder
+    # ------------------------------------------------------------------
+    print("\n[Step 3 / 7] Generating monthly outputs (details, summaries, inventory)...")
+    monthly_results = run_monthly_outputs(
+        inventory_csv_path=inventory_csv_path,
+        output_base_folder=output_base_folder,
+        sqlite_db_path=sqlite_db_path,
+        all_transactions=all_transactions,
+        save_csv=save_csv,
+        save_sqlite=save_sqlite,
+        verbose=verbose,
+    )
+    all_transaction_details = monthly_results["all_transaction_details"]
+    all_product_summaries   = monthly_results["all_product_summaries"]
+    all_ledger_summaries    = monthly_results["all_ledger_summaries"]
+
+    # ------------------------------------------------------------------
+    # Step 4: Generate customer feedback
     # Weighted by transaction volume per product per month
     # ------------------------------------------------------------------
-    print("\n[Step 3 / 5] Generating customer feedback...")
+    print("\n[Step 4 / 7] Generating customer feedback...")
     all_feedback = run_feedback_generator(
         inventory_csv_path=inventory_csv_path,
         output_base_folder=output_base_folder,
@@ -153,15 +198,40 @@ def run_advanced_pipeline(
     )
 
     # ------------------------------------------------------------------
-    # Step 4: Run inventory optimizer
-    # Uses five-year transaction history to compute restock needs
+    # Step 5: Save monthly sales_events.csv per month folder
+    # Each year/month folder needs its own sales_events.csv slice
     # ------------------------------------------------------------------
-    print("\n[Step 4 / 5] Running inventory optimizer...")
+    if save_csv:
+        print("\n[Step 5 / 7] Saving monthly sales events per folder...")
+        from src.advanced.sales_event_generator import save_monthly_sales_events_csv
+        from src.advanced.five_year_generator import START_YEAR, END_YEAR
+        count = 0
+        for year in range(START_YEAR, END_YEAR + 1):
+            for month in range(1, 13):
+                save_monthly_sales_events_csv(
+                    sales_events=sales_events,
+                    year=year,
+                    month=month,
+                    output_base_folder=output_base_folder,
+                )
+                count += 1
+        if verbose:
+            print(f"  Monthly sales_events.csv saved for {count} month folders.")
+    else:
+        print("\n[Step 5 / 7] Skipping monthly sales events (save_csv=False).")
+
+    # ------------------------------------------------------------------
+    # Step 6: Run inventory optimizer
+    # Uses five-year transaction history to compute restock needs.
+    # Pass all_product_summaries so remaining_stock is accurate.
+    # ------------------------------------------------------------------
+    print("\n[Step 6 / 7] Running inventory optimizer...")
     all_restock = run_inventory_optimizer(
         inventory_csv_path=inventory_csv_path,
         output_base_folder=output_base_folder,
         sqlite_db_path=sqlite_db_path,
         all_transactions=all_transactions,
+        all_product_summaries=all_product_summaries,
         sales_events=sales_events,
         save_csv=save_csv,
         save_sqlite=save_sqlite,
@@ -169,15 +239,29 @@ def run_advanced_pipeline(
     )
 
     # ------------------------------------------------------------------
-    # Step 5: Run pricing strategy
+    # Step 7: Run pricing strategy
     # Uses five-year demand history to recommend prices
     # ------------------------------------------------------------------
-    print("\n[Step 5 / 5] Running pricing strategy engine...")
+    print("\n[Step 7 / 7] Running pricing and dashboard engines...")
     pricing_recommendations = run_pricing_strategy(
         inventory_csv_path=inventory_csv_path,
         output_base_folder=output_base_folder,
         sqlite_db_path=sqlite_db_path,
         all_transactions=all_transactions,
+        all_product_summaries=all_product_summaries,
+        save_csv=save_csv,
+        save_sqlite=save_sqlite,
+        verbose=verbose,
+    )
+
+    # Build advanced dashboard (event peaks visible in monthly trend)
+    dashboard = run_advanced_dashboard(
+        output_base_folder=output_base_folder,
+        sqlite_db_path=sqlite_db_path,
+        all_ledger_summaries=all_ledger_summaries,
+        all_product_summaries=all_product_summaries,
+        all_transaction_details=all_transaction_details,
+        sales_events=sales_events,
         save_csv=save_csv,
         save_sqlite=save_sqlite,
         verbose=verbose,
@@ -189,21 +273,42 @@ def run_advanced_pipeline(
     print("\n" + "=" * 72)
     print("ADVANCED PIPELINE COMPLETE")
     print("=" * 72)
-    print(f"Sales events          : {len(sales_events):,} records")
-    print(f"Transactions (5yr)    : {len(all_transactions):,} records")
-    print(f"Customer feedback     : {len(all_feedback):,} records")
-    print(f"Restock recommendations: {len(all_restock):,} records")
-    print(f"Pricing recommendations: {len(pricing_recommendations):,} records")
-    print(f"\nSQLite database       : {sqlite_db_path}")
-    print(f"Output folder         : {output_base_folder}")
+    print(f"Sales events             : {len(sales_events):,} records")
+    print(f"Transactions (5yr)       : {len(all_transactions):,} records")
+    print(f"Transaction details (5yr): {len(all_transaction_details):,} records")
+    print(f"Product summaries (5yr)  : {len(all_product_summaries):,} records")
+    print(f"Ledger summaries (5yr)   : {len(all_ledger_summaries):,} records")
+    print(f"Customer feedback        : {len(all_feedback):,} records")
+    print(f"Restock recommendations  : {len(all_restock):,} records")
+    print(f"Pricing recommendations  : {len(pricing_recommendations):,} records")
+    print(f"Dashboard rows           : {len(dashboard):,} records")
+    print(f"\nSQLite database          : {sqlite_db_path}")
+    print(f"Output folder            : {output_base_folder}")
+
+    print("\nMonthly folder contents (each year_YYYY/month_MM/):")
+    for f in [
+        "transactions.csv",
+        "transaction_details.csv",
+        "product_summary.csv",
+        "ledger_summary.csv",
+        "restock_recommendations.csv",
+        "customer_feedback.csv",
+        "sales_events.csv",
+        "inventory_before_monthly_sales.csv",
+    ]:
+        print(f"  ✓ {f}")
     print("=" * 72)
 
     return {
         "sales_events":            sales_events,
         "all_transactions":        all_transactions,
+        "all_transaction_details": all_transaction_details,
+        "all_product_summaries":   all_product_summaries,
+        "all_ledger_summaries":    all_ledger_summaries,
         "all_feedback":            all_feedback,
         "all_restock":             all_restock,
         "pricing_recommendations": pricing_recommendations,
+        "dashboard":               dashboard,
     }
 
 
