@@ -144,10 +144,10 @@ Expected: **247 passing.**
 
 ## How it maps to the project rubric
 
-| Rubric category | Weight | Where to look |
-|---|---:|---|
-| Basic goal + tests | 40% | `src/basic/`, `test/basic/basic_test.py`, `notebooks/basic_demo.ipynb` |
-| Intermediate goal + tests | 20% | `src/intermediate/`, `test/intermediate/`, `notebooks/intermediate_demo.ipynb` |
-| Advanced goal + tests | 20% | `src/advanced/`, `test/advanced/`, `notebooks/advanced_demo.ipynb` |
-| Visualizations + PEP 8 | 20% | `reports/figures/` + every notebook's chart section. `pycodestyle --max-line-length=99` is clean on `E501/E402/W292/E712/W391`. |
+| Rubric category | Weight | Where to look | Contributor |
+|---|---:|---|---|
+| Basic goal + tests | 40% | `src/basic/`, `test/basic/basic_test.py`, `notebooks/basic_demo.ipynb` | Jaco |
+| Intermediate goal + tests | 20% | `src/intermediate/`, `test/intermediate/`, `notebooks/intermediate_demo.ipynb` | Justin |
+| Advanced goal + tests | 20% | `src/advanced/`, `test/advanced/`, `notebooks/advanced_demo.ipynb` | John |
+| Visualizations + PEP 8 | 20% | `reports/figures/` + every notebook's chart section. `pycodestyle --max-line-length=99` is clean on `E501/E402/W292/E712/W391`. | Lean |
 
