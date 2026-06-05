@@ -1,0 +1,17 @@
+# Sari-Sari Store Simulator — runtime + dev dependencies
+#
+# Run modules and tests with these pinned ranges:
+#   pip install -r requirements.txt
+#
+# Notebooks additionally require jupysql + prettytable>=3.12.0 for the
+# %%sql magic; their first cell installs them.
+
+# Runtime
+pandas>=2.0
+numpy>=1.26
+matplotlib>=3.7
+sqlalchemy>=2.0
+
+# Test + lint
+pytest>=8.0
+pycodestyle>=2.11
