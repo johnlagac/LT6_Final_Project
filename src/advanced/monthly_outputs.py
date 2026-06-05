@@ -444,7 +444,7 @@ def save_aggregated_outputs_to_sqlite(
     """
     sqlite_db_path = Path(sqlite_db_path)
     sqlite_db_path.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{sqlite_db_path}")
+    engine = create_engine(f"sqlite:///{sqlite_db_path}", connect_args={"timeout": 30})
 
     all_transaction_details.to_sql(
         name="advanced_transaction_details_5yr",
@@ -458,6 +458,8 @@ def save_aggregated_outputs_to_sqlite(
         name="advanced_monthly_ledger_summary",
         con=engine, if_exists="replace", index=False,
     )
+
+    engine.dispose()
 
     print(f"SQLite tables saved   : advanced_transaction_details_5yr")
     print(f"                        advanced_monthly_product_summary")

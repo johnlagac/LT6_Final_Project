@@ -23,7 +23,7 @@ def get_engine(sqlite_db_path: str = "database/sari_sari_store.db") -> Engine:
     sqlite_db_path = Path(sqlite_db_path)
     sqlite_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(f"sqlite:///{sqlite_db_path}")
+    engine = create_engine(f"sqlite:///{sqlite_db_path}", connect_args={"timeout": 30})
 
     return engine
 

@@ -377,7 +377,7 @@ def save_inventory_recommendations_to_sqlite(
     sqlite_db_path = Path(sqlite_db_path)
     sqlite_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(f"sqlite:///{sqlite_db_path}")
+    engine = create_engine(f"sqlite:///{sqlite_db_path}", connect_args={"timeout": 30})
 
     all_restock.to_sql(
         name="advanced_inventory_recommendations",
@@ -385,6 +385,8 @@ def save_inventory_recommendations_to_sqlite(
         if_exists="replace",
         index=False,
     )
+
+    engine.dispose()
 
     print(
         f"SQLite table saved    : "
