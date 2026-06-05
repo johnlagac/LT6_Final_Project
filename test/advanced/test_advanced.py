@@ -38,7 +38,8 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.advanced.five_year_generator import (
+# Imports below the sys.path manipulation are intentional; E402 silenced.
+from src.advanced.five_year_generator import (  # noqa: E402
     _growth_multiplier,
     _expected_daily_qty,
     generate_monthly_transactions,
@@ -50,14 +51,14 @@ from src.advanced.five_year_generator import (
     BASELINE_DAILY_UNITS,
     MONTHLY_SEASONALITY,
 )
-from src.advanced.sales_event_generator import (
+from src.advanced.sales_event_generator import (  # noqa: E402
     _demand_multiplier,
     _safe_date,
     generate_sales_events,
     get_events_for_month,
     EVENT_TEMPLATES,
 )
-from src.advanced.feedback_generator import (
+from src.advanced.feedback_generator import (  # noqa: E402
     _sentiment_from_rating,
     _pick_comment,
     generate_monthly_feedback,
@@ -65,7 +66,7 @@ from src.advanced.feedback_generator import (
     FEEDBACK_PER_PRODUCT_MIN,
     FEEDBACK_PER_PRODUCT_MAX,
 )
-from src.advanced.inventory_optimizer import (
+from src.advanced.inventory_optimizer import (  # noqa: E402
     _classify_stockout_risk,
     _build_recommendation_reason,
     calculate_monthly_restock,
@@ -73,7 +74,7 @@ from src.advanced.inventory_optimizer import (
     RESTOCK_MONTHS_COVERAGE,
     MIN_RESTOCK_UNITS,
 )
-from src.advanced.pricing_strategy import (
+from src.advanced.pricing_strategy import (  # noqa: E402
     _compute_gross_margin,
     _compute_demand_trend,
     _recommend_price,
@@ -83,18 +84,15 @@ from src.advanced.pricing_strategy import (
     PRICE_INCREASE_RATE,
     PRICE_DECREASE_RATE,
 )
-from src.advanced.sales_event_generator import DEMAND_ELASTICITY
-
-
-# ---------------------------------------------------------------------------
-from src.advanced.monthly_outputs import (
+from src.advanced.sales_event_generator import DEMAND_ELASTICITY  # noqa: E402
+from src.advanced.monthly_outputs import (  # noqa: E402
     build_transaction_details,
     build_product_summary,
     build_ledger_summary,
     build_inventory_before_sales,
     save_monthly_outputs,
 )
-from src.advanced.advanced_dashboard import (
+from src.advanced.advanced_dashboard import (  # noqa: E402
     build_advanced_dashboard_data,
     _has_event,
 )
@@ -1208,7 +1206,8 @@ class TestBuildLedgerSummary(unittest.TestCase):
     def test_required_columns_present(self):
         result = build_ledger_summary(self.details, 2022, 6)
         for col in [
-            "month", "month_start", "month_end", "days_in_month",
+            "month", "year", "month_num",
+            "month_start", "month_end", "days_in_month",
             "transaction_count", "unique_products_sold",
             "total_quantity_sold", "total_revenue", "total_expense",
             "gross_profit", "gross_margin_rate",
@@ -1218,6 +1217,13 @@ class TestBuildLedgerSummary(unittest.TestCase):
     def test_month_label_format(self):
         result = build_ledger_summary(self.details, 2022, 6)
         self.assertEqual(result.iloc[0]["month"], "2022-06")
+
+    def test_numeric_year_and_month_num(self):
+        """Dashboard needs numeric year + month_num to sort 60 rows."""
+        result = build_ledger_summary(self.details, 2022, 6)
+        row = result.iloc[0]
+        self.assertEqual(int(row["year"]), 2022)
+        self.assertEqual(int(row["month_num"]), 6)
 
     def test_days_in_month_correct(self):
         """June has 30 days."""
@@ -1437,6 +1443,8 @@ class TestBuildAdvancedDashboardData(unittest.TestCase):
                 days = calendar.monthrange(year, month)[1]
                 ledger_rows.append({
                     "month": f"{year}-{month:02d}",
+                    "year": year,
+                    "month_num": month,
                     "month_start": f"{year}-{month:02d}-01",
                     "month_end":   f"{year}-{month:02d}-{days:02d}",
                     "days_in_month": days,
@@ -1447,7 +1455,6 @@ class TestBuildAdvancedDashboardData(unittest.TestCase):
                     "total_expense":  1400.0,
                     "gross_profit":    600.0,
                     "gross_margin_rate": 0.30,
-                    "year": year, "month": month,
                 })
                 for _, prod in inventory.iterrows():
                     product_rows.append({
@@ -1597,7 +1604,7 @@ class TestBuildAdvancedDashboardData(unittest.TestCase):
         self.assertGreater(len(result), 0)
 
         trend = result[result["metric_group"] == "monthly_revenue_trend"]
-        self.assertTrue((trend["event_flag"] == False).all())
+        self.assertTrue((~trend["event_flag"].astype(bool)).all())
 
     def test_five_year_kpi_total_revenue_correct(self):
         """60 months × PHP 2,000 = PHP 120,000."""

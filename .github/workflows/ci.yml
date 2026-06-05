@@ -1,0 +1,228 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow manual runs from the Actions tab
+  workflow_dispatch:
+
+# Cancel an in-progress run if a new commit lands on the same branch / PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests + lint (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            pandas \
+            numpy \
+            matplotlib \
+            sqlalchemy \
+            pytest \
+            pycodestyle
+
+      - name: Show versions
+        run: |
+          python --version
+          pip list
+
+      - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest test/ -v --tb=short
+
+      - name: Run intermediate script-style sanity checks
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          if [ -f test/intermediate/test_intermediate_sanity_checks.py ]; then
+            python test/intermediate/test_intermediate_sanity_checks.py
+          else
+            echo "No intermediate sanity-check script found; skipping."
+          fi
+
+      - name: PEP 8 (pycodestyle) — fail on targeted error classes
+        run: |
+          # Same rule set the project explicitly cleans:
+          # E501 (long lines), E402 (import-not-at-top),
+          # W292 (no EOF newline), E712 (== True/False), W391 (blank line EOF).
+          # E221 (whitespace before operator) is intentional alignment style
+          # in the dashboards and is excluded.
+          python -m pycodestyle \
+            --max-line-length=99 \
+            --select=E501,E402,W292,E712,W391 \
+            --exclude='*/.ipynb_checkpoints/*,*/__pycache__/*' \
+            src/ test/
+
+      - name: Notebook JSON validity check
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          failed = []
+          for nb in Path("notebooks").glob("*.ipynb"):
+              try:
+                  data = json.loads(nb.read_text())
+              except Exception as exc:
+                  failed.append(f"{nb}: {exc}")
+                  continue
+              if "cells" not in data or "nbformat" not in data:
+                  failed.append(f"{nb}: missing required notebook keys")
+                  continue
+              print(f"OK  {nb}  cells={len(data['cells'])} "
+                    f"nbformat={data['nbformat']}.{data.get('nbformat_minor')}")
+
+          if failed:
+              print("\nNotebook validation failures:")
+              for line in failed:
+                  print(f"  - {line}")
+              sys.exit(1)
+          PY
+
+  pipeline-smoke:
+    name: Pipeline smoke (Python 3.12)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy matplotlib sqlalchemy
+
+      - name: Basic — one-day workflow runs clean
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "
+          from src.basic.sales_calculator import run_basic_sales_calculator
+          result = run_basic_sales_calculator()
+          ledger = next(
+              x for x in result
+              if hasattr(x, 'columns') and 'ledger_status' in x.columns
+          )
+          status = ledger.iloc[0]['ledger_status']
+          assert status == 'BALANCED', f'expected BALANCED, got {status}'
+          print('Basic OK — ledger status:', status)
+          "
+
+      - name: Intermediate — one-month workflow runs clean
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "
+          from src.intermediate.monthly_simulator import (
+              run_intermediate_monthly_simulator,
+          )
+          outs = run_intermediate_monthly_simulator(
+              month='2026-01',
+              random_seed=512,
+              save_outputs=False,
+              create_charts=False,
+          )
+          assert len(outs['monthly_transactions']) > 0
+          assert len(outs['monthly_ledger_summary']) == 1
+          assert len(outs['monthly_product_summary']) == 15
+          print('Intermediate OK — 8 outputs produced.')
+          "
+
+      - name: Advanced — five-year pipeline runs clean
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "
+          from pathlib import Path
+          from src.advanced.advanced_runner import run_advanced_pipeline
+          root = Path.cwd()
+          res = run_advanced_pipeline(
+              inventory_csv_path=root / 'data/raw/inventory.csv',
+              output_base_folder=root / 'data/processed/advanced',
+              sqlite_db_path=root / 'src/database/sari_sari_store.db',
+              random_seed=42,
+              save_csv=False,
+              save_sqlite=False,
+              verbose=False,
+          )
+          assert len(res['all_ledger_summaries']) == 60, 'expected 60 months'
+          assert len(res['pricing_recommendations']) == 15
+          assert len(res['dashboard']) > 0
+          print('Advanced OK — 60 months, 15 pricing recs,',
+                len(res['dashboard']), 'dashboard rows.')
+          "
+
+  report-artifacts:
+    name: Generate report charts (PNG bundle)
+    runs-on: ubuntu-latest
+    needs: pipeline-smoke
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy matplotlib sqlalchemy
+
+      - name: Generate chart artifacts
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          MPLBACKEND: Agg
+        run: |
+          python -m src.reports.generate_report_charts
+          echo "---"
+          find reports/figures -type f -name "*.png" | sort
+
+      - name: Upload chart bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: lt6-report-charts-${{ github.sha }}
+          path: reports/figures/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload pipeline CSV outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lt6-pipeline-csvs-${{ github.sha }}
+          path: data/processed/
+          if-no-files-found: error
+          retention-days: 14

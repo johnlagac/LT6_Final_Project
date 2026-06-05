@@ -121,9 +121,10 @@ def build_advanced_dashboard_data(
     ----------
     all_ledger_summaries : pd.DataFrame
         Combined monthly ledger summaries from run_monthly_outputs().
-        Required columns: month, year, total_revenue, total_expense,
-        gross_profit, gross_margin_rate, total_quantity_sold,
-        transaction_count, unique_products_sold.
+        Required columns: month (label "YYYY-MM"), year (int),
+        month_num (int 1-12), total_revenue, total_expense, gross_profit,
+        gross_margin_rate, total_quantity_sold, transaction_count,
+        unique_products_sold.
     all_product_summaries : pd.DataFrame
         Combined monthly product summaries from run_monthly_outputs().
         Required columns: product_id, product_name, category,
@@ -177,12 +178,12 @@ def build_advanced_dashboard_data(
     # ------------------------------------------------------------------
     if not all_ledger_summaries.empty:
         ledger_sorted = all_ledger_summaries.sort_values(
-            ["year", "month"]
+            ["year", "month_num"]
         ).reset_index(drop=True)
 
         for _, lr in ledger_sorted.iterrows():
             year  = int(lr["year"])
-            month = int(lr["month"])
+            month = int(lr["month_num"])
             label = f"{year}-{month:02d}"
             flag  = _has_event(sales_events, year, month)
 
@@ -346,8 +347,8 @@ def print_dashboard_summary(dashboard: pd.DataFrame) -> None:
             print(f"  {row['metric_name']:<35} : {val:>14,}")
 
     event_months = dashboard[
-        (dashboard["metric_group"] == "monthly_revenue_trend") &
-        (dashboard["event_flag"] == True)
+        (dashboard["metric_group"] == "monthly_revenue_trend")
+        & dashboard["event_flag"].astype(bool)
     ]
     print(f"\n  Event-peak months flagged : {len(event_months)}")
 
@@ -532,7 +533,7 @@ def run_advanced_dashboard(
 
     if verbose:
         print(f"\nDashboard rows total  : {len(dashboard):,}")
-        event_peaks = (dashboard["event_flag"] == True).sum()
+        event_peaks = dashboard["event_flag"].astype(bool).sum()
         print(f"Event-flagged rows    : {event_peaks:,}")
         print("Dashboard generation complete.")
         print("=" * 72)
