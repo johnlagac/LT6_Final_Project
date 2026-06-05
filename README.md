@@ -144,47 +144,10 @@ Expected: **247 passing.**
 
 ## How it maps to the project rubric
 
-| Rubric category | Weight | Where to look |
-|---|---:|---|
-| Basic goal + tests | 40% | `src/basic/`, `test/basic/basic_test.py`, `notebooks/basic_demo.ipynb` |
-| Intermediate goal + tests | 20% | `src/intermediate/`, `test/intermediate/`, `notebooks/intermediate_demo.ipynb` |
-| Advanced goal + tests | 20% | `src/advanced/`, `test/advanced/`, `notebooks/advanced_demo.ipynb` |
-| Visualizations + PEP 8 | 20% | `reports/figures/` + every notebook's chart section. `pycodestyle --max-line-length=99` is clean on `E501/E402/W292/E712/W391`. |
+| Rubric category | Weight | Where to look | Contributor |
+|---|---:|---|---|
+| Basic goal + tests | 40% | `src/basic/`, `test/basic/basic_test.py`, `notebooks/basic_demo.ipynb` | Jaco |
+| Intermediate goal + tests | 20% | `src/intermediate/`, `test/intermediate/`, `notebooks/intermediate_demo.ipynb` | Justin |
+| Advanced goal + tests | 20% | `src/advanced/`, `test/advanced/`, `notebooks/advanced_demo.ipynb` | John |
+| Visualizations + PEP 8 | 20% | `reports/figures/` + every notebook's chart section. `pycodestyle --max-line-length=99` is clean on `E501/E402/W292/E712/W391`. | Lean |
 
----
-
-## CI pipeline (`.github/workflows/ci.yml`)
-
-Runs on every push to `main` and every pull request. Three jobs, each
-blocking the next:
-
-1. **`test`** — matrix on Python 3.12 + 3.13
-   * `pytest test/ -v`
-   * Intermediate script-style sanity script
-   * `pycodestyle --max-line-length=99 --select=E501,E402,W292,E712,W391` —
-     `E221` (vertical-alignment style) is intentionally excluded
-   * Notebook JSON validity check
-2. **`pipeline-smoke`** — asserts each level's end-to-end runner produces
-   the expected shape: `BALANCED` basic ledger; 1-row intermediate ledger
-   + 15-product summary; 60-month advanced ledger + 15 pricing
-   recommendations.
-3. **`report-artifacts`** — runs `src.reports.generate_report_charts` on a
-   clean checkout and uploads two downloadable bundles to the run's
-   Summary page:
-   * `lt6-report-charts-<sha>` — 15 presentation-ready PNGs
-     (basic 3 / intermediate 5 / advanced 7), retained 30 days
-   * `lt6-pipeline-csvs-<sha>` — full `data/processed/` tree including
-     60 month folders × 8 files, retained 14 days
-
-To download from a PR: **Checks** tab → click `CI` run → **Artifacts**
-section at the bottom → click the artifact name for a `.zip`.
-
----
-
-## Reporting requirements
-
-DSC 512 grades the repo itself plus the demo notebooks (rubric in
-`Project_guidelines.pdf`). **No formal paper or PowerPoint is required**
-for this course. The PNG artifacts produced by CI are optional aids for
-any team-presentation deck and reinforce the 20% Visualizations bucket as
-concrete evidence even if a grader doesn't execute every notebook.
