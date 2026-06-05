@@ -1,26 +1,28 @@
 """
 test_advanced.py
 
-Unit tests for the Advanced-level Sari-Sari Store Simulator modules.
+Unit tests for all Advanced-level Sari-Sari Store Simulator modules.
 
-Tests cover every major public function across all five files:
-    - five_year_generator.py
-    - sales_event_generator.py
-    - feedback_generator.py
-    - inventory_optimizer.py
-    - pricing_strategy.py
+Covers:
+    five_year_generator.py    - transaction generation, growth, seasonality
+    sales_event_generator.py  - event generation, demand multipliers, date logic
+    feedback_generator.py     - ratings, sentiment, comment banks, volume weighting
+    inventory_optimizer.py    - stockout risk, restock quantity logic
+    pricing_strategy.py       - margin math, demand trends, price recommendations
+    monthly_outputs.py        - transaction details, product summary, ledger summary,
+                                inventory_before_monthly_sales per month folder
+    advanced_dashboard.py     - five-year dashboard, event peak detection
 
-Each test uses a minimal synthetic inventory (3 products) to keep
-execution fast. No files are written to disk and no SQLite connections
-are opened unless the test explicitly calls a save function.
+Each test uses a minimal 3-product inventory to keep execution fast.
+No files are written to disk and no SQLite connections are opened unless
+the test explicitly calls a save function.
 
 Run from project root:
-    python -m pytest test/test_advanced.py -v
+    python -m pytest test/advanced/test_advanced.py -v
 
-Or without pytest:
-    python test/test_advanced.py
+Or directly:
+    python test/advanced/test_advanced.py
 """
-
 import sys
 import unittest
 import tempfile
@@ -85,6 +87,19 @@ from src.advanced.sales_event_generator import DEMAND_ELASTICITY
 
 
 # ---------------------------------------------------------------------------
+from src.advanced.monthly_outputs import (
+    build_transaction_details,
+    build_product_summary,
+    build_ledger_summary,
+    build_inventory_before_sales,
+    save_monthly_outputs,
+)
+from src.advanced.advanced_dashboard import (
+    build_advanced_dashboard_data,
+    _has_event,
+)
+
+
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
@@ -147,9 +162,11 @@ def make_sales_events() -> pd.DataFrame:
     ])
 
 
-def make_transactions(year: int = 2022, month: int = 1) -> pd.DataFrame:
+def make_transactions(year: int = 2022, month: int = 6) -> pd.DataFrame:
     """
     Minimal synthetic transactions matching the real schema.
+    Includes two Coke (P001) rows so remaining_stock and transaction_count
+    assertions work correctly across both the generator and gap test suites.
     """
     return pd.DataFrame([
         {
@@ -166,6 +183,12 @@ def make_transactions(year: int = 2022, month: int = 1) -> pd.DataFrame:
         },
         {
             "transaction_id":   f"ADV-{year}{month:02d}-00003",
+            "transaction_date": pd.Timestamp(date(year, month, 15)),
+            "product_id":       "P001",
+            "quantity_sold":    3,
+        },
+        {
+            "transaction_id":   f"ADV-{year}{month:02d}-00004",
             "transaction_date": pd.Timestamp(date(year, month, 15)),
             "product_id":       "P014",
             "quantity_sold":    10,
@@ -1008,6 +1031,586 @@ class TestBuildPricingRecommendations(unittest.TestCase):
         result = build_pricing_recommendations(self.inventory, txns)
         ids    = result["product_id"].tolist()
         self.assertEqual(ids, sorted(ids))
+
+
+# ===========================================================================
+# Runner
+# ===========================================================================
+
+if __name__ == "__main__":
+    loader = unittest.TestLoader()
+    suite  = loader.loadTestsFromModule(__import__("__main__"))
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    sys.exit(0 if result.wasSuccessful() else 1)
+
+
+# TEST: build_transaction_details
+# ===========================================================================
+
+class TestBuildTransactionDetails(unittest.TestCase):
+
+    def setUp(self):
+        self.inventory    = make_inventory()
+        self.transactions = make_transactions()
+
+    def test_returns_dataframe(self):
+        result = build_transaction_details(self.transactions, self.inventory)
+        self.assertIsInstance(result, pd.DataFrame)
+
+    def test_required_columns_present(self):
+        result = build_transaction_details(self.transactions, self.inventory)
+        for col in [
+            "transaction_id", "transaction_date", "product_id",
+            "product_name", "category", "quantity_sold",
+            "unit_cost", "unit_price", "revenue", "expense",
+            "gross_profit", "starting_stock",
+            "total_quantity_sold", "remaining_stock",
+        ]:
+            self.assertIn(col, result.columns, f"Missing column: {col}")
+
+    def test_revenue_calculation(self):
+        """revenue = quantity_sold * unit_price."""
+        result = build_transaction_details(self.transactions, self.inventory)
+        for _, row in result.iterrows():
+            expected = row["quantity_sold"] * row["unit_price"]
+            self.assertAlmostEqual(row["revenue"], expected)
+
+    def test_expense_calculation(self):
+        """expense = quantity_sold * unit_cost."""
+        result = build_transaction_details(self.transactions, self.inventory)
+        for _, row in result.iterrows():
+            expected = row["quantity_sold"] * row["unit_cost"]
+            self.assertAlmostEqual(row["expense"], expected)
+
+    def test_gross_profit_calculation(self):
+        """gross_profit = revenue - expense."""
+        result = build_transaction_details(self.transactions, self.inventory)
+        for _, row in result.iterrows():
+            self.assertAlmostEqual(
+                row["gross_profit"], row["revenue"] - row["expense"]
+            )
+
+    def test_remaining_stock_correct_for_coke(self):
+        """Coke sold 5+3=8 units; starting_stock=24 → remaining=16."""
+        result = build_transaction_details(self.transactions, self.inventory)
+        coke_rows = result[result["product_id"] == "P001"]
+        self.assertTrue((coke_rows["remaining_stock"] == 16).all())
+
+    def test_remaining_stock_never_negative(self):
+        result = build_transaction_details(self.transactions, self.inventory)
+        self.assertTrue((result["remaining_stock"] >= 0).all())
+
+    def test_row_count_matches_transactions(self):
+        result = build_transaction_details(self.transactions, self.inventory)
+        self.assertEqual(len(result), len(self.transactions))
+
+    def test_empty_transactions_returns_empty_dataframe(self):
+        empty_txns = pd.DataFrame(columns=[
+            "transaction_id", "transaction_date",
+            "product_id", "quantity_sold",
+        ])
+        result = build_transaction_details(empty_txns, self.inventory)
+        self.assertTrue(result.empty)
+
+    def test_sorted_by_date_then_id(self):
+        result = build_transaction_details(self.transactions, self.inventory)
+        dates = result["transaction_date"].tolist()
+        self.assertEqual(dates, sorted(dates))
+
+
+# ===========================================================================
+# TEST: build_product_summary
+# ===========================================================================
+
+class TestBuildProductSummary(unittest.TestCase):
+
+    def setUp(self):
+        self.inventory = make_inventory()
+        self.details   = build_transaction_details(
+            make_transactions(), self.inventory
+        )
+
+    def test_returns_dataframe(self):
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        self.assertIsInstance(result, pd.DataFrame)
+
+    def test_one_row_per_product(self):
+        """Product summary must have exactly one row per inventory product."""
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        self.assertEqual(len(result), len(self.inventory))
+
+    def test_required_columns_present(self):
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        for col in [
+            "product_id", "product_name", "category",
+            "starting_stock", "unit_cost", "unit_price",
+            "total_quantity_sold", "total_revenue", "total_expense",
+            "gross_profit", "gross_margin_rate", "transaction_count",
+            "remaining_stock", "average_daily_sales",
+            "sell_through_rate", "year", "month",
+        ]:
+            self.assertIn(col, result.columns, f"Missing column: {col}")
+
+    def test_coke_total_quantity_sold(self):
+        """Coke: two transactions for 5+3=8 units."""
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        coke = result[result["product_id"] == "P001"].iloc[0]
+        self.assertEqual(coke["total_quantity_sold"], 8)
+
+    def test_product_with_no_sales_has_zero_revenue(self):
+        """P014 has sales in fixtures; but if we pass empty details for it,
+        all zero-fill columns should be zero, not NaN."""
+        empty_details = pd.DataFrame(columns=self.details.columns)
+        result = build_product_summary(empty_details, self.inventory, 2022, 6)
+        for col in ["total_quantity_sold", "total_revenue", "gross_profit"]:
+            self.assertTrue((result[col] == 0).all())
+
+    def test_gross_margin_rate_between_zero_and_one(self):
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        selling = result[result["total_revenue"] > 0]
+        self.assertTrue((selling["gross_margin_rate"] > 0).all())
+        self.assertTrue((selling["gross_margin_rate"] < 1).all())
+
+    def test_year_month_columns_correct(self):
+        result = build_product_summary(self.details, self.inventory, 2024, 11)
+        self.assertTrue((result["year"]  == 2024).all())
+        self.assertTrue((result["month"] == 11).all())
+
+    def test_sell_through_rate_between_zero_and_one(self):
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        self.assertTrue((result["sell_through_rate"] >= 0).all())
+        self.assertTrue((result["sell_through_rate"] <= 1).all())
+
+    def test_sorted_by_product_id(self):
+        result = build_product_summary(self.details, self.inventory, 2022, 6)
+        ids = result["product_id"].tolist()
+        self.assertEqual(ids, sorted(ids))
+
+
+# ===========================================================================
+# TEST: build_ledger_summary
+# ===========================================================================
+
+class TestBuildLedgerSummary(unittest.TestCase):
+
+    def setUp(self):
+        self.inventory = make_inventory()
+        self.details   = build_transaction_details(
+            make_transactions(), self.inventory
+        )
+
+    def test_returns_single_row_dataframe(self):
+        result = build_ledger_summary(self.details, 2022, 6)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(len(result), 1)
+
+    def test_required_columns_present(self):
+        result = build_ledger_summary(self.details, 2022, 6)
+        for col in [
+            "month", "month_start", "month_end", "days_in_month",
+            "transaction_count", "unique_products_sold",
+            "total_quantity_sold", "total_revenue", "total_expense",
+            "gross_profit", "gross_margin_rate",
+        ]:
+            self.assertIn(col, result.columns, f"Missing column: {col}")
+
+    def test_month_label_format(self):
+        result = build_ledger_summary(self.details, 2022, 6)
+        self.assertEqual(result.iloc[0]["month"], "2022-06")
+
+    def test_days_in_month_correct(self):
+        """June has 30 days."""
+        result = build_ledger_summary(self.details, 2022, 6)
+        self.assertEqual(result.iloc[0]["days_in_month"], 30)
+
+    def test_days_in_month_february_non_leap(self):
+        result = build_ledger_summary(self.details, 2022, 2)
+        self.assertEqual(result.iloc[0]["days_in_month"], 28)
+
+    def test_days_in_month_february_leap(self):
+        result = build_ledger_summary(self.details, 2024, 2)
+        self.assertEqual(result.iloc[0]["days_in_month"], 29)
+
+    def test_total_revenue_matches_details(self):
+        result = build_ledger_summary(self.details, 2022, 6)
+        expected = round(float(self.details["revenue"].sum()), 2)
+        self.assertAlmostEqual(result.iloc[0]["total_revenue"], expected)
+
+    def test_gross_profit_equals_revenue_minus_expense(self):
+        result = build_ledger_summary(self.details, 2022, 6)
+        row = result.iloc[0]
+        self.assertAlmostEqual(
+            row["gross_profit"],
+            round(row["total_revenue"] - row["total_expense"], 2),
+            places=2,
+        )
+
+    def test_empty_details_gives_zero_values(self):
+        empty = pd.DataFrame(columns=self.details.columns)
+        result = build_ledger_summary(empty, 2022, 6)
+        self.assertEqual(result.iloc[0]["total_revenue"], 0.0)
+        self.assertEqual(result.iloc[0]["gross_profit"],  0.0)
+
+    def test_transaction_count_correct(self):
+        """4 unique transaction_ids in make_transactions()."""
+        result = build_ledger_summary(self.details, 2022, 6)
+        self.assertEqual(result.iloc[0]["transaction_count"], 4)
+
+    def test_unique_products_sold_correct(self):
+        """3 distinct products in make_transactions()."""
+        result = build_ledger_summary(self.details, 2022, 6)
+        self.assertEqual(result.iloc[0]["unique_products_sold"], 3)
+
+
+# ===========================================================================
+# TEST: build_inventory_before_sales
+# ===========================================================================
+
+class TestBuildInventoryBeforeSales(unittest.TestCase):
+
+    def setUp(self):
+        self.inventory = make_inventory()
+
+    def test_returns_dataframe(self):
+        result = build_inventory_before_sales(self.inventory, 2022, 6)
+        self.assertIsInstance(result, pd.DataFrame)
+
+    def test_one_row_per_product(self):
+        result = build_inventory_before_sales(self.inventory, 2022, 6)
+        self.assertEqual(len(result), len(self.inventory))
+
+    def test_required_columns_present(self):
+        result = build_inventory_before_sales(self.inventory, 2022, 6)
+        for col in [
+            "product_id", "product_name", "category",
+            "starting_stock", "unit_cost", "unit_price",
+            "year", "month",
+        ]:
+            self.assertIn(col, result.columns)
+
+    def test_starting_stock_matches_inventory(self):
+        """Snapshot must preserve original starting_stock values."""
+        result = build_inventory_before_sales(self.inventory, 2022, 6)
+        merged = result.merge(
+            self.inventory[["product_id", "starting_stock"]],
+            on="product_id", suffixes=("_snap", "_orig"),
+        )
+        self.assertTrue(
+            (merged["starting_stock_snap"] == merged["starting_stock_orig"]).all()
+        )
+
+    def test_does_not_modify_original_inventory(self):
+        """Calling this function must not change the input DataFrame."""
+        original_stock = self.inventory["starting_stock"].copy()
+        build_inventory_before_sales(self.inventory, 2022, 6)
+        pd.testing.assert_series_equal(
+            self.inventory["starting_stock"], original_stock
+        )
+
+    def test_year_month_columns_correct(self):
+        result = build_inventory_before_sales(self.inventory, 2025, 3)
+        self.assertTrue((result["year"]  == 2025).all())
+        self.assertTrue((result["month"] == 3).all())
+
+    def test_sorted_by_product_id(self):
+        result = build_inventory_before_sales(self.inventory, 2022, 1)
+        ids = result["product_id"].tolist()
+        self.assertEqual(ids, sorted(ids))
+
+
+# ===========================================================================
+# TEST: save_monthly_outputs
+# ===========================================================================
+
+class TestSaveMonthlyOutputs(unittest.TestCase):
+
+    def setUp(self):
+        self.inventory = make_inventory()
+        self.details   = build_transaction_details(
+            make_transactions(), self.inventory
+        )
+        self.summary  = build_product_summary(self.details, self.inventory, 2022, 6)
+        self.ledger   = build_ledger_summary(self.details, 2022, 6)
+        self.inv_before = build_inventory_before_sales(self.inventory, 2022, 6)
+
+    def test_creates_all_four_csv_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_monthly_outputs(
+                transaction_details=self.details,
+                product_summary=self.summary,
+                ledger_summary=self.ledger,
+                inventory_before=self.inv_before,
+                year=2022, month=6,
+                output_base_folder=tmpdir,
+            )
+            folder = Path(tmpdir) / "year_2022" / "month_06"
+            for fname in [
+                "transaction_details.csv",
+                "product_summary.csv",
+                "ledger_summary.csv",
+                "inventory_before_monthly_sales.csv",
+            ]:
+                self.assertTrue(
+                    (folder / fname).exists(),
+                    f"{fname} was not created"
+                )
+
+    def test_creates_correct_folder_structure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paths = save_monthly_outputs(
+                transaction_details=self.details,
+                product_summary=self.summary,
+                ledger_summary=self.ledger,
+                inventory_before=self.inv_before,
+                year=2023, month=11,
+                output_base_folder=tmpdir,
+            )
+            for path in paths.values():
+                self.assertIn("year_2023", str(path))
+                self.assertIn("month_11", str(path))
+
+    def test_saved_files_are_readable(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            save_monthly_outputs(
+                transaction_details=self.details,
+                product_summary=self.summary,
+                ledger_summary=self.ledger,
+                inventory_before=self.inv_before,
+                year=2022, month=6,
+                output_base_folder=tmpdir,
+            )
+            folder = Path(tmpdir) / "year_2022" / "month_06"
+            loaded = pd.read_csv(folder / "transaction_details.csv")
+            self.assertEqual(len(loaded), len(self.details))
+
+
+# ===========================================================================
+# TEST: _has_event
+# ===========================================================================
+
+class TestHasEvent(unittest.TestCase):
+
+    def setUp(self):
+        self.events = make_sales_events()
+
+    def test_returns_true_for_active_event_month(self):
+        """June 2022 has the Summer Beverage Sale."""
+        self.assertTrue(_has_event(self.events, 2022, 6))
+
+    def test_returns_true_for_december(self):
+        """December 2022 has the Christmas Food Promo."""
+        self.assertTrue(_has_event(self.events, 2022, 12))
+
+    def test_returns_false_for_month_with_no_event(self):
+        self.assertFalse(_has_event(self.events, 2022, 3))
+
+    def test_returns_false_for_different_year(self):
+        self.assertFalse(_has_event(self.events, 2023, 6))
+
+    def test_returns_false_for_none_events(self):
+        self.assertFalse(_has_event(None, 2022, 6))
+
+    def test_returns_false_for_empty_events(self):
+        empty = pd.DataFrame(columns=["start_date", "end_date",
+                                       "affected_category"])
+        self.assertFalse(_has_event(empty, 2022, 6))
+
+
+# ===========================================================================
+# TEST: build_advanced_dashboard_data
+# ===========================================================================
+
+class TestBuildAdvancedDashboardData(unittest.TestCase):
+
+    def _make_60_month_data(self):
+        """Build minimal 60-month ledger, product summary, and detail frames."""
+        ledger_rows  = []
+        product_rows = []
+        detail_rows  = []
+        inventory    = make_inventory()
+        counter      = 1
+
+        for year in range(2022, 2027):
+            for month in range(1, 13):
+                import calendar
+                days = calendar.monthrange(year, month)[1]
+                ledger_rows.append({
+                    "month": f"{year}-{month:02d}",
+                    "month_start": f"{year}-{month:02d}-01",
+                    "month_end":   f"{year}-{month:02d}-{days:02d}",
+                    "days_in_month": days,
+                    "transaction_count": 40,
+                    "unique_products_sold": 3,
+                    "total_quantity_sold": 100,
+                    "total_revenue":  2000.0,
+                    "total_expense":  1400.0,
+                    "gross_profit":    600.0,
+                    "gross_margin_rate": 0.30,
+                    "year": year, "month": month,
+                })
+                for _, prod in inventory.iterrows():
+                    product_rows.append({
+                        "product_id":    prod["product_id"],
+                        "product_name":  prod["product_name"],
+                        "category":      prod["category"],
+                        "starting_stock": prod["starting_stock"],
+                        "unit_cost":     prod["unit_cost"],
+                        "unit_price":    prod["unit_price"],
+                        "total_quantity_sold": 30,
+                        "total_revenue":  300.0,
+                        "total_expense":  200.0,
+                        "gross_profit":   100.0,
+                        "gross_margin_rate": 0.33,
+                        "transaction_count": 10,
+                        "remaining_stock": 15,
+                        "average_daily_sales": 1.0,
+                        "sell_through_rate": 0.5,
+                        "year": year, "month": month,
+                    })
+                    detail_rows.append({
+                        "transaction_id":   f"ADV-{year}{month:02d}-{counter:05d}",
+                        "transaction_date": f"{year}-{month:02d}-01",
+                        "product_id":       prod["product_id"],
+                        "product_name":     prod["product_name"],
+                        "category":         prod["category"],
+                        "quantity_sold":    30,
+                        "unit_cost":        prod["unit_cost"],
+                        "unit_price":       prod["unit_price"],
+                        "revenue":          300.0,
+                        "expense":          200.0,
+                        "gross_profit":     100.0,
+                        "starting_stock":   prod["starting_stock"],
+                        "total_quantity_sold": 30,
+                        "remaining_stock":  15,
+                    })
+                    counter += 1
+
+        return (
+            pd.DataFrame(ledger_rows),
+            pd.DataFrame(product_rows),
+            pd.DataFrame(detail_rows),
+        )
+
+    def setUp(self):
+        (
+            self.ledger_summaries,
+            self.product_summaries,
+            self.transaction_details,
+        ) = self._make_60_month_data()
+        self.sales_events = make_sales_events()
+
+    def test_returns_dataframe(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        self.assertIsInstance(result, pd.DataFrame)
+
+    def test_required_columns_present(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        for col in ["metric_group", "metric_name", "dimension",
+                    "value", "rank", "event_flag"]:
+            self.assertIn(col, result.columns)
+
+    def test_contains_kpi_summary_group(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        self.assertIn("kpi_summary", result["metric_group"].values)
+
+    def test_contains_monthly_revenue_trend_group(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        self.assertIn("monthly_revenue_trend", result["metric_group"].values)
+
+    def test_monthly_revenue_trend_has_60_rows(self):
+        """One row per month × 5 years = 60 rows in the trend."""
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        trend = result[
+            (result["metric_group"] == "monthly_revenue_trend") &
+            (result["metric_name"]  == "monthly_revenue")
+        ]
+        self.assertEqual(len(trend), 60)
+
+    def test_event_peak_months_are_flagged(self):
+        """Months with active sales events must have event_flag=True."""
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        trend = result[result["metric_group"] == "monthly_revenue_trend"]
+
+        june_2022 = trend[trend["dimension"] == "2022-06"]
+        self.assertFalse(june_2022.empty)
+        self.assertTrue(june_2022.iloc[0]["event_flag"])
+
+    def test_non_event_months_not_flagged(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        trend = result[result["metric_group"] == "monthly_revenue_trend"]
+        march_2022 = trend[trend["dimension"] == "2022-03"]
+        self.assertFalse(march_2022.empty)
+        self.assertFalse(march_2022.iloc[0]["event_flag"])
+
+    def test_contains_annual_summary_for_all_five_years(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        annual = result[result["metric_group"] == "annual_summary"]
+        years_present = set(annual["dimension"].unique())
+        self.assertEqual(years_present, {"2022", "2023", "2024", "2025", "2026"})
+
+    def test_contains_sales_by_category(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        self.assertIn("sales_by_category", result["metric_group"].values)
+
+    def test_contains_top_selling_products(self):
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        self.assertIn("top_selling_products", result["metric_group"].values)
+
+    def test_no_events_still_produces_dashboard(self):
+        """Dashboard should build correctly even with no sales events."""
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, sales_events=None,
+        )
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertGreater(len(result), 0)
+
+        trend = result[result["metric_group"] == "monthly_revenue_trend"]
+        self.assertTrue((trend["event_flag"] == False).all())
+
+    def test_five_year_kpi_total_revenue_correct(self):
+        """60 months × PHP 2,000 = PHP 120,000."""
+        result = build_advanced_dashboard_data(
+            self.ledger_summaries, self.product_summaries,
+            self.transaction_details, self.sales_events,
+        )
+        kpi = result[
+            (result["metric_group"] == "kpi_summary") &
+            (result["metric_name"]  == "total_revenue_5yr")
+        ]
+        self.assertFalse(kpi.empty)
+        self.assertAlmostEqual(float(kpi.iloc[0]["value"]), 120000.0)
 
 
 # ===========================================================================
