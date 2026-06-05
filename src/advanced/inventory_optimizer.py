@@ -285,7 +285,7 @@ def calculate_monthly_restock(
         "unit_cost",
         "unit_price",
         "avg_monthly_demand",
-        "current_stock",
+        "remaining_stock",
         "avg_daily_sales",
         "stockout_risk",
         "recommended_restock_quantity",
@@ -294,7 +294,7 @@ def calculate_monthly_restock(
 
     result = result.rename(columns={
         "avg_monthly_demand": "average_monthly_quantity_sold",
-        "current_stock":      "current_stock",
+        "remaining_stock":    "current_stock",
         "avg_daily_sales":    "average_daily_sales",
     })
 
