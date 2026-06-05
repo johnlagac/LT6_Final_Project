@@ -376,12 +376,24 @@ def build_monthly_ledger_summary(
     days_in_month = monthrange(month_start.year, month_start.month)[1]
     month_end = month_start + pd.offsets.MonthEnd(0)
 
-    total_revenue = float(transaction_details["revenue"].sum()) if not transaction_details.empty else 0.0
-    total_expense = float(transaction_details["expense"].sum()) if not transaction_details.empty else 0.0
-    gross_profit = float(transaction_details["gross_profit"].sum()) if not transaction_details.empty else 0.0
-    total_quantity_sold = int(transaction_details["quantity_sold"].sum()) if not transaction_details.empty else 0
-    transaction_count = int(transaction_details["transaction_id"].nunique()) if not transaction_details.empty else 0
-    unique_products_sold = int(transaction_details["product_id"].nunique()) if not transaction_details.empty else 0
+    if transaction_details.empty:
+        total_revenue = 0.0
+        total_expense = 0.0
+        gross_profit = 0.0
+        total_quantity_sold = 0
+        transaction_count = 0
+        unique_products_sold = 0
+    else:
+        total_revenue = float(transaction_details["revenue"].sum())
+        total_expense = float(transaction_details["expense"].sum())
+        gross_profit = float(transaction_details["gross_profit"].sum())
+        total_quantity_sold = int(transaction_details["quantity_sold"].sum())
+        transaction_count = int(
+            transaction_details["transaction_id"].nunique()
+        )
+        unique_products_sold = int(
+            transaction_details["product_id"].nunique()
+        )
     gross_margin_rate = gross_profit / total_revenue if total_revenue else 0.0
 
     return pd.DataFrame(

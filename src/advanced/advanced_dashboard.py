@@ -347,8 +347,8 @@ def print_dashboard_summary(dashboard: pd.DataFrame) -> None:
             print(f"  {row['metric_name']:<35} : {val:>14,}")
 
     event_months = dashboard[
-        (dashboard["metric_group"] == "monthly_revenue_trend") &
-        (dashboard["event_flag"] == True)
+        (dashboard["metric_group"] == "monthly_revenue_trend")
+        & dashboard["event_flag"].astype(bool)
     ]
     print(f"\n  Event-peak months flagged : {len(event_months)}")
 
@@ -533,7 +533,7 @@ def run_advanced_dashboard(
 
     if verbose:
         print(f"\nDashboard rows total  : {len(dashboard):,}")
-        event_peaks = (dashboard["event_flag"] == True).sum()
+        event_peaks = dashboard["event_flag"].astype(bool).sum()
         print(f"Event-flagged rows    : {event_peaks:,}")
         print("Dashboard generation complete.")
         print("=" * 72)
